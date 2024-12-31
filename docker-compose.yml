@@ -1,0 +1,60 @@
+services:
+  db:
+    image: postgres:14.5
+    restart: always
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=elearning
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=elearning
+  cache:
+    image: redis:7.0.4
+    restart: always
+    volumes:
+      - ./data/cache:/data
+  web:
+    build: .
+    command: ["uwsgi", "--ini", "/code/uwsgi.ini"]
+    restart: always
+    volumes:
+      - .:/code
+    environment:
+      - DJANGO_SETTINGS_MODULE=educ.settings.prod
+      - POSTGRES_DB=elearning
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=elearning
+    depends_on:
+      - db
+      - cache
+  daphne:
+    build: .
+    working_dir: /code
+    command: [ "daphne", "-b", "0.0.0.0", "-p", "8001", "educ.asgi:application" ]
+    restart: always
+    volumes:
+      - .:/code
+    environment:
+      - DJANGO_SETTINGS_MODULE=educ.settings.prod
+      - POSTGRES_DB=elearning
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=elearning
+    depends_on:
+      - db
+      - cache
+
+  nginx:
+    image: nginx:latest
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx:/etc/nginx/conf.d
+      - ./staticfiles:/code/staticfiles
+      - ./media:/code/media
+      - ./ssl:/etc/ssl
+    depends_on:
+      - web
+volumes:
+  postgres_data:

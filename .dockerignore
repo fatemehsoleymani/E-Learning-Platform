@@ -1,0 +1,5 @@
+data/db
+.venv
+data/
+*.lnk
+**/node_modules/
